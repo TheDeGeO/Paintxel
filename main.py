@@ -4,28 +4,49 @@ with contextlib.redirect_stdout(None):
 
 import screenTypes as st
 
-
 pygame.init()
 pygame.display.set_caption("PaintXel")
 
-window = pygame.display.set_mode((800, 600))
+window = pygame.display.set_mode((900, 725))
 
 clock = pygame.time.Clock()
 
+screen_state = "title"
 screen = st.ScreenType("title")
+
+mouseClickTime = 0
+mouseCoolDown = 0.5
+click = False
+
 
 running = True
 while running:
 
+    #Events and metadata
     time_delta = clock.tick(60) / 1000
+    current_time = pygame.time.get_ticks()
     mouse_cords = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
+        #Manage click cooldown
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if mouseClickTime + mouseCoolDown < current_time:
+                click = True
+                mouseClickTime = current_time 
+                print(mouse_cords) 
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            click = False
+
     window.fill((255, 255, 255))
 
-    screen.draw(window, mouse_cords)
+
+    newScreen = screen.draw(window, mouse_cords, click)
+    if newScreen != screen_state:
+        screen_state = newScreen
+        screen = st.ScreenType(newScreen)
 
     pygame.display.update()
 
