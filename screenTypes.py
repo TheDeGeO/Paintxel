@@ -56,6 +56,9 @@ class ScreenType:
             self.drawASCII = False
             self.surfaceASCII = None
 
+            self.zommSurface = None
+            self.zoom = False
+
             #Canvas
             self.actualColor = clr.BLACK
             self.drawing = False
@@ -232,20 +235,29 @@ class ScreenType:
                         charX = 0
                         charY += self.canvas.pixel_size
                     self.drawASCII = True
-                    print(newPixels)
                 else:
                     self.drawASCII = False
+                
+                #SAVE ASCII
+                if self.saveASCIIButton.rect.collidepoint(cursor):
+                    matrixASCII = self.canvas.getASCIIpixels()
+                    fm.saveFile(matrixASCII)
+                
+                #ZOOM
+                if self.zoomInButton.rect.collidepoint(cursor):
+                    self.zoom = True
+                else:
+                    self.zoom = False
                     
             
                     
             if self.drawASCII:
                 window.blit(self.surfaceASCII, (100, 0))
+
+            if self.zoom:
+                self.zoomSurface = self.canvas.magnifyingGlass(cursor)
+                window.blit(self.zoomSurface, (cursor))
                     
-
-                
-
-
-
                     
 
             return self.type

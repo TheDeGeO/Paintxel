@@ -295,3 +295,30 @@ class Canvas:
         self.updatePixelCords()
 
         self.reDraw()
+    
+    def magnifyingGlass(self, cursor: tuple[int, int], size: int=100):
+        cursor = (cursor[0] - self.rect.left, cursor[1] - self.rect.top)
+
+        crop_x = cursor[0] - size // 2
+        crop_y = cursor[1] - size // 2
+        crop_w = size // 2
+        crop_h = size // 2
+
+        if crop_x < 0:
+            crop_x = 0
+        if crop_y < 0:
+            crop_y = 0
+        if crop_x + size > self.surface.get_width():
+            crop_x = self.surface.get_width() - size
+        if crop_y + size > self.surface.get_height():
+            crop_y = self.surface.get_height() - size
+
+        croppedRegion = self.surface.subsurface((crop_x, crop_y, crop_w, crop_h))
+        magnifiedSurface = pygame.transform.smoothscale(croppedRegion, (size, size))
+        finalSF = ImageBlock(croppedRegion, size, crop_x, crop_y, 2).surface
+
+        print(f"Cursor: {cursor}")
+        print(f"crop_x: {crop_x}, crop_y: {crop_y}")
+        print(f"crop_w: {crop_w}, crop_h: {crop_h}")
+
+        return finalSF
