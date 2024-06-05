@@ -261,10 +261,3 @@ class ScreenType:
                     
 
             return self.type
-
-
-        
-            
-
-
-
