@@ -3,6 +3,7 @@ with contextlib.redirect_stdout(None):
     import pygame
 import guiTools as gui
 import colors as clr
+import fileManager as fm
 
 #Set default font
 font = pygame.freetype.Font("assets/fonts/InconsolataNerdFontMono-Regular.ttf", 32)
@@ -19,16 +20,21 @@ class ScreenType:
             self.newImageButton = gui.Button(font, "New Image", 32, 450, 300)
             self.loadImageButton = gui.Button(font, "Load Image", 32, 450, 400)
 
-        elif self.type == "new":
+        elif self.type == "new" or self.type == "load":
             #Left pannel icons
             self.drawButton = gui.Button(font, "", 32, 20, 20)
             self.eraseButton = gui.Button(font, "󰇾", 32, 20, 72)
             self.zoomInButton = gui.Button(font, "", 32, 20, 124)
             self.rotateRightButton = gui.Button(font, "", 32, 20, 176)
             self.rotateLeftButton = gui.Button(font, "", 32, 20, 228)
-            self.saveButton = gui.Button(font, "󰆓", 32, 20, 280)
+            self.reflectVerticalButton = gui.Button(font, "󰨏", 32, 20, 280)
+            self.reflectHorizontalButton = gui.Button(font, "󰨎", 32, 20, 332)
+            self.saveButton = gui.Button(font, "󰆓", 32, 20, 384)
+            self.reloadButton = gui.Button(font, "", 32, 20, 436)
             #Quit button at bottom left corner
-            self.quitButton = gui.Button(font, "", 32, 20, 705, foreground = clr.RED)
+            self.quitButton = gui.Button(font, "", 32, 20, 705, foreground = clr.PASTEL_RED)
+            #Clear button on top of quit
+            self.clearButton = gui.Button(font, "", 32, 20, 665, foreground = clr.PASTEL_RED)
             #Color buttons
             self.blackButton = gui.ColorButton(clr.BLACK, 32, 72, 20)
             self.whiteButton = gui.ColorButton(clr.PASTEL_WHITE, 32, 72, 72)
@@ -40,17 +46,29 @@ class ScreenType:
             self.pinkButton = gui.ColorButton(clr.PASTEL_PINK, 32, 72, 384)
             self.orangeButton = gui.ColorButton(clr.PASTEL_ORANGE, 32, 72, 436)
             self.purpleButton = gui.ColorButton(clr.PASTEL_PURPLE, 32, 72, 488)
-            self.brownButton = gui.ColorButton(clr.PASTEL_BROWN, 32, 72, 540)
 
+            #Right pannel icons
+            self.highContrastButton = gui.Button(font, "󰆗", 32, 880, 20, foreground = clr.PASTEL_YELLOW)
+            self.negativeButton = gui.Button(font, "󰌁", 32, 880, 72, foreground = clr.PASTEL_YELLOW)
+            self.asciiButton = gui.Button(font, "󱔁󰈈", 32, 880, 124, foreground = clr.PASTEL_YELLOW)
+            self.saveASCIIButton = gui.Button(font, "󱔁", 32, 880, 176, foreground = clr.PASTEL_YELLOW)
+
+            self.drawASCII = False
+            self.surfaceASCII = None
+
+            #Canvas
             self.actualColor = clr.BLACK
             self.drawing = False
-
-            self.canvas = gui.Canvas(0, 105, 6, 120, 120)
             self.canvasIsDrawn = False
 
+            if self.type == "new":
+                self.canvas = gui.Canvas(0, 105, 6, 120, 120)
 
-
-    def draw(self, window, cursor, click):
+            elif self.type == "load":
+                pixels = fm.loadFile(6)
+                self.canvas = gui.Canvas(0, 105, 6, 120, 120, pixels=pixels)
+        
+    def draw(self, window, cursor, click, singleClick):
         if self.type == "title":
             #Print title
             self.paintexlTitle.draw(window)
@@ -61,14 +79,15 @@ class ScreenType:
             #Load image button
             self.loadImageButton.draw(window, cursor)
 
+
             if click:
                 if self.newImageButton.rect.collidepoint(cursor):
                     return "new"
                 if self.loadImageButton.rect.collidepoint(cursor):
                     return "load"
-            return "title"
+            return self.type
 
-        if self.type == "new":
+        if self.type == "new" or self.type == "load":
             #Left pannel
             pygame.draw.rect(window, clr.BACKGROUND, (0, 0, 100, 725))
 
@@ -82,9 +101,17 @@ class ScreenType:
             self.rotateRightButton.draw(window, cursor)
             #Rotate left button
             self.rotateLeftButton.draw(window, cursor)
+            #Reflect vertical button
+            self.reflectVerticalButton.draw(window, cursor)
+            #Reflect horizontal button
+            self.reflectHorizontalButton.draw(window, cursor)
             #Save button
             self.saveButton.draw(window, cursor)
+            #Reload button
+            self.reloadButton.draw(window, cursor)
 
+            #Clear button
+            self.clearButton.draw(window, cursor)
             #Quit button
             self.quitButton.draw(window, cursor)
 
@@ -99,13 +126,23 @@ class ScreenType:
             self.orangeButton.draw(window, cursor)
             self.yellowButton.draw(window, cursor)
             self.pinkButton.draw(window, cursor)
-            self.brownButton.draw(window, cursor)
+
+            #Right pannel
+            pygame.draw.rect(window, clr.BACKGROUND, (100, 0, 800, 725))
+            #High contrast button
+            self.highContrastButton.draw(window, cursor)
+            #Negative button
+            self.negativeButton.draw(window, cursor)
+            #See ASCII button
+            self.asciiButton.draw(window, cursor)
+            #Save ASCII button
+            self.saveASCIIButton.draw(window, cursor)
 
             #Canvas
             draw = self.drawing and click
             self.canvas.draw(window, cursor, draw, self.actualColor)
 
-            if click:
+            if singleClick:
                 #Change color
                 if self.whiteButton.rect.collidepoint(cursor):
                     self.actualColor = clr.PASTEL_WHITE
@@ -127,8 +164,6 @@ class ScreenType:
                     self.actualColor = clr.PASTEL_YELLOW
                 if self.pinkButton.rect.collidepoint(cursor):
                     self.actualColor = clr.PASTEL_PINK
-                if self.brownButton.rect.collidepoint(cursor):
-                    self.actualColor = clr.PASTEL_BROWN
 
                 #Draw
                 if self.drawButton.rect.collidepoint(cursor):
@@ -137,9 +172,83 @@ class ScreenType:
                 if self.eraseButton.rect.collidepoint(cursor):
                     self.drawing = True
                     self.actualColor = clr.WHITE
+
+                #ROTATE LEFT
+                if self.rotateLeftButton.rect.collidepoint(cursor):
+                    self.canvas.rotate(False)
+                
+                #ROTATE RIGHT
+                if self.rotateRightButton.rect.collidepoint(cursor):
+                    self.canvas.rotate(True)
+                
+                #REFLECT VERTICAL
+                if self.reflectVerticalButton.rect.collidepoint(cursor):
+                    self.canvas.reflect(True)
+                
+                #REFLECT HORIZONTAL
+                if self.reflectHorizontalButton.rect.collidepoint(cursor):
+                    self.canvas.reflect(False)
+
+                #SAVE
+                if self.saveButton.rect.collidepoint(cursor):
+                    numPixels = self.canvas.getNumericPixels()
+                    fm.saveFile(numPixels)
+
+                #RELOAD
+                if self.reloadButton.rect.collidepoint(cursor):
+                    self.canvas.reDraw()
+
+                #CLEAR
+                if self.clearButton.rect.collidepoint(cursor):
+                    self.canvas.clear()                    
+                #QUIT
+
+                if self.quitButton.rect.collidepoint(cursor):
+                    return "title"
+
+                #HIGH CONTRAST
+                if self.highContrastButton.rect.collidepoint(cursor):
+                    newPixels = self.canvas.getHighContrastPixels()
+                    self.canvas.pixels = newPixels
+                    self.canvas.reDraw()
+
+                #NEGATIVE
+                if self.negativeButton.rect.collidepoint(cursor):
+                    newPixels = self.canvas.getInversePixels()
+                    self.canvas.pixels = newPixels
+                    self.canvas.reDraw()
+
+                #ASCII
+                if self.asciiButton.rect.collidepoint(cursor):
+                    newPixels = self.canvas.getASCIIpixels()
+                    self.surfaceASCII = pygame.Surface((self.canvas.rect.width, self.canvas.rect.height))
+                    charX = 0
+                    charY = 0
+                    for row in newPixels:
+                        for char in row:
+                            charSurface = font.render(char, bgcolor = clr.BLACK, fgcolor = clr.WHITE, size = self.canvas.pixel_size)[0]
+                            self.surfaceASCII.blit(charSurface, (charX, charY))
+                            charX += self.canvas.pixel_size
+                        charX = 0
+                        charY += self.canvas.pixel_size
+                    self.drawASCII = True
+                    print(newPixels)
+                else:
+                    self.drawASCII = False
+                    
+            
+                    
+            if self.drawASCII:
+                window.blit(self.surfaceASCII, (100, 0))
                     
 
-            return "new"
+                
+
+
+
+                    
+
+            return self.type
 
 
         

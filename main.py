@@ -15,8 +15,9 @@ screen_state = "title"
 screen = st.ScreenType("title")
 
 mouseClickTime = 0
-mouseCoolDown = 0.5
+mouseCoolDown = 0.2
 click = False
+slingleClick = False
 
 
 running = True
@@ -24,7 +25,7 @@ while running:
 
     #Events and metadata
     time_delta = clock.tick(60) / 1000
-    current_time = pygame.time.get_ticks()
+    current_time = pygame.time.get_ticks() / 1000
     mouse_cords = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -34,8 +35,9 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if mouseClickTime + mouseCoolDown < current_time:
                 click = True
-                mouseClickTime = current_time 
-                print(mouse_cords) 
+                slingleClick = True
+                mouseClickTime = current_time  
+                print(mouse_cords)
 
         if event.type == pygame.MOUSEBUTTONUP:
             click = False
@@ -43,7 +45,7 @@ while running:
     window.fill((255, 255, 255))
 
 
-    newScreen = screen.draw(window, mouse_cords, click)
+    newScreen = screen.draw(window, mouse_cords, click, slingleClick)
     if newScreen != screen_state:
         screen_state = newScreen
         screen = st.ScreenType(newScreen)
@@ -51,6 +53,8 @@ while running:
     pygame.display.update()
 
     clock.tick(60)
+
+    slingleClick = False
 
 pygame.quit()
 

@@ -6,6 +6,7 @@ pygame.init()
 
 import colors as clr
 
+
 class TextBlock:
     def __init__(self, font: pygame.freetype.Font, text: str, size: int, x: int, y: int, margin: int=10,
                  background: tuple[int, int, int]=clr.BACKGROUND, 
@@ -132,13 +133,14 @@ class ColorButton:
             window.blit(self.surface, self.rect)
 
 class ColorBlock:
-    def __init__(self, color: tuple[int, int, int], size: int, x: int, y: int, margin: int=10):
+    def __init__(self, color: tuple[int, int, int], size: int, x: int, y: int, margin: int=10, isBase: bool=True):
 
         self.color = color
         self.size = size
         self.x = x
         self.y = y
         self.margin = margin
+        self.isBase = isBase
 
         colorSurface = pygame.Surface((self.size, self.size))
         colorSurface.fill(self.color)
@@ -153,7 +155,7 @@ class ColorBlock:
 
 #Pixel art canvas composed of (wxh) pixels. Pixels are represented with colorButtons
 class Canvas:
-    def __init__(self, top: int, left: int, pixel_size: int, width: int, height: int, background: tuple[int, int, int]=clr.BACKGROUND):
+    def __init__(self, top: int, left: int, pixel_size: int, width: int, height: int, background: tuple[int, int, int]=clr.BACKGROUND, pixels: list[list[ColorBlock]]=[]):
         self.top = top
         self.left = left
         self.pixel_size = pixel_size
@@ -165,14 +167,19 @@ class Canvas:
         self.surface.fill(self.background)
         self.rect = self.surface.get_rect(topleft=(left, top))
 
-        self.pixels = []
-        for i in range(height):
-            self.pixels.append([])
-            for j in range(width):
-                pixel_x = j * pixel_size + self.pixel_size
-                pixel_y = i * pixel_size + self.pixel_size
-                self.pixels[i].append(ColorBlock(clr.WHITE, pixel_size, pixel_x, pixel_y, 1))
-                self.surface.blit(self.pixels[i][j].surface, self.pixels[i][j].rect)
+        self.pixels = pixels
+        if not self.pixels:
+            for i in range(height):
+                self.pixels.append([])
+                for j in range(width):
+                    pixel_x = j * pixel_size + self.pixel_size
+                    pixel_y = i * pixel_size + self.pixel_size
+                    self.pixels[i].append(ColorBlock(clr.WHITE, pixel_size, pixel_x, pixel_y, 0))
+                    self.surface.blit(self.pixels[i][j].surface, self.pixels[i][j].rect)
+        else:
+            for i in pixels:
+                for j in i:
+                    self.surface.blit(j.surface, j.rect)
 
     def draw(self, window, cursor, click, color):
         window.blit(self.surface, self.rect)
@@ -182,8 +189,109 @@ class Canvas:
             for row in self.pixels:
                 for pixel in row:
                     if pixel.rect.collidepoint(cursor):
-                        pixel.surface.fill(color)
-                        self.surface.blit(pixel.surface, pixel.rect)
+                        if pixel.color == color:
+                            return
+                        index = row.index(pixel)
+
+                        newPixel = ColorBlock(color, pixel.size, pixel.x, pixel.y, pixel.margin, False)
+                        row[index] = newPixel
+                        self.surface.blit(newPixel.surface, newPixel.rect)
     
     def getPixels(self):
         return self.pixels
+    
+    #Buil numeric matrix
+    def getNumericPixels(self): 
+        pixels = []
+
+        for i in range(len(self.pixels)):
+            pixels.append([])
+            for j in range(len(self.pixels[i])):
+                color = self.pixels[i][j].color
+                num = clr.getColorNumber(color)
+                pixels[i].append(num)
+
+        return pixels
+    
+    def getASCIIpixels(self):
+        pixels = []
+
+        for i in range(len(self.pixels)):
+            pixels.append([])
+            for j in range(len(self.pixels[i])):
+                color = self.pixels[i][j].color
+                symbol = clr.getAsciiArtSymbol(color)
+                pixels[i].append(symbol)
+
+        return pixels
+    
+    def getHighContrastPixels(self):
+        pixels = []
+
+        for i in range(len(self.pixels)):
+            pixels.append([])
+            for j in range(len(self.pixels[i])):
+                oldPixel = self.pixels[i][j]
+                newColor = clr.getHighContrastColor(oldPixel.color)
+                newPixel = ColorBlock(newColor, oldPixel.size, oldPixel.x, oldPixel.y, oldPixel.margin, oldPixel.isBase)
+                pixels[i].append(newPixel)
+
+        return pixels
+
+    def getInversePixels(self):
+        pixels = []
+
+        for i in range(len(self.pixels)):
+            pixels.append([])
+            for j in range(len(self.pixels[i])):
+                oldPixel = self.pixels[i][j]
+                newColor = clr.getInverseColor(oldPixel.color)
+                newPixel = ColorBlock(newColor, oldPixel.size, oldPixel.x, oldPixel.y, oldPixel.margin, oldPixel.isBase)
+                pixels[i].append(newPixel)
+
+        return pixels
+    
+
+    
+    def clear(self):
+        for row in self.pixels:
+            for pixel in row:
+                if not pixel.isBase or pixel.color != clr.WHITE:
+                    newPixel = ColorBlock(clr.WHITE, pixel.size, pixel.x, pixel.y, pixel.margin, pixel.isBase)
+                    row[row.index(pixel)] = newPixel
+                    self.surface.blit(newPixel.surface, newPixel.rect)
+    
+    def reDraw(self):
+        self.surface.fill(self.background)
+        for row in self.pixels:
+            for pixel in row:
+                self.surface.blit(pixel.surface, pixel.rect)
+    
+    def updatePixelCords(self):
+        for i in range(len(self.pixels)):
+            for j in range(len(self.pixels[i])):
+                pixelX = j * self.pixel_size + self.pixel_size
+                pixelY = i * self.pixel_size + self.pixel_size
+                self.pixels[i][j].x = pixelX
+                self.pixels[i][j].y = pixelY
+                self.pixels[i][j].rect.center = (pixelX, pixelY)
+
+        self.reDraw()
+    
+    def rotate(self, clockwise: bool):
+        if clockwise:
+            self.pixels = list(map(list, zip(*self.pixels[::-1])))
+        else:
+            self.pixels = list(map(list, zip(*self.pixels)))[::-1]
+
+        self.updatePixelCords()
+    
+    def reflect(self, vertical: bool):
+        if vertical:
+            self.pixels = self.pixels[::-1]
+        else:
+            self.pixels = [row[::-1] for row in self.pixels]
+
+        self.updatePixelCords()
+
+        self.reDraw()
